@@ -12,7 +12,7 @@ import (
 
 type MyServer struct {
 	serveMux       *http.ServeMux
-	middlewareList []Middleware
+	MiddlewareList []Middleware
 	PrefixServeMux *http.ServeMux
 }
 
@@ -59,7 +59,7 @@ func (api *MyAPIServer) Run() error {
 	api.GetMyHttpServer()
 
 	//get registered middleware
-	middlewareChain := api.MiddlewareChain(api.Serv.middlewareList)
+	middlewareChain := api.MiddlewareChain(api.Serv.MiddlewareList)
 
 	//get final middleware
 	var servM *http.ServeMux
