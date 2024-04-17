@@ -33,8 +33,9 @@ func (api *MyAPIServer) GetMyHttpServer() {
 }
 
 func (api *MyAPIServer) Get(pattern string, myHandler func(http.ResponseWriter, *http.Request)) {
+	routePattern := "GET /" + pattern
 
-	api.Serv.ServeMux.HandleFunc("GET /"+pattern, myHandler)
+	api.Serv.ServeMux.HandleFunc(routePattern, myHandler)
 }
 
 func (api *MyAPIServer) Post(pattern string, myHandler func(http.ResponseWriter, *http.Request)) {
