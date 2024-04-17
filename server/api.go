@@ -11,7 +11,7 @@ import (
 )
 
 type MyServer struct {
-	serveMux       *http.ServeMux
+	ServeMux       *http.ServeMux
 	MiddlewareList []Middleware
 	PrefixServeMux *http.ServeMux
 }
@@ -29,24 +29,24 @@ type MyAPIServer struct {
 }
 
 func (api *MyAPIServer) GetMyHttpServer() {
-	api.Serv.serveMux = http.NewServeMux()
+	api.Serv.ServeMux = http.NewServeMux()
 }
 
 func (api *MyAPIServer) Get(pattern string, myHandler func(http.ResponseWriter, *http.Request)) {
 
-	api.Serv.serveMux.HandleFunc("GET /"+pattern, myHandler)
+	api.Serv.ServeMux.HandleFunc("GET /"+pattern, myHandler)
 }
 
 func (api *MyAPIServer) Post(pattern string, myHandler func(http.ResponseWriter, *http.Request)) {
-	api.Serv.serveMux.HandleFunc("GET /"+pattern, myHandler)
+	api.Serv.ServeMux.HandleFunc("GET /"+pattern, myHandler)
 }
 func (api *MyAPIServer) Put(pattern string, myHandler func(http.ResponseWriter, *http.Request)) {
-	api.Serv.serveMux.HandleFunc("GET /"+pattern, myHandler)
+	api.Serv.ServeMux.HandleFunc("GET /"+pattern, myHandler)
 }
 
 func (api *MyAPIServer) Prefix(prefix string) *http.ServeMux {
 	v1 := http.NewServeMux()
-	v1.Handle("/api/v1/", http.StripPrefix("/api/v1", api.Serv.serveMux))
+	v1.Handle("/api/v1/", http.StripPrefix("/api/v1", api.Serv.ServeMux))
 	return v1
 }
 
@@ -65,10 +65,10 @@ func (api *MyAPIServer) Run() error {
 	var servM http.Handler
 	if api.Serv.PrefixServeMux != nil && middlewareChain != nil {
 		servM = middlewareChain(api.Serv.PrefixServeMux)
-	} else if api.Serv.serveMux != nil && middlewareChain != nil {
-		servM = middlewareChain(api.Serv.serveMux)
+	} else if api.Serv.ServeMux != nil && middlewareChain != nil {
+		servM = middlewareChain(api.Serv.ServeMux)
 	} else {
-		servM = api.Serv.serveMux
+		servM = api.Serv.ServeMux
 	}
 
 	//Define server
