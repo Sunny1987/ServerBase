@@ -62,9 +62,11 @@ func (api *MyAPIServer) Run() error {
 	middlewareChain := api.MiddlewareChain(api.Serv.MiddlewareList)
 
 	//get final middleware
-	var servM *http.ServeMux
-	if api.Serv.PrefixServeMux != nil {
-		servM = api.Serv.PrefixServeMux
+	var servM http.Handler
+	if api.Serv.PrefixServeMux != nil && middlewareChain != nil {
+		servM = middlewareChain(api.Serv.PrefixServeMux)
+	} else if api.Serv.serveMux != nil && middlewareChain != nil {
+		servM = middlewareChain(api.Serv.serveMux)
 	} else {
 		servM = api.Serv.serveMux
 	}
@@ -72,7 +74,7 @@ func (api *MyAPIServer) Run() error {
 	//Define server
 	prodServer := &http.Server{
 		Addr:         api.Addr,
-		Handler:      middlewareChain(servM),
+		Handler:      servM,
 		ReadTimeout:  api.ReadTimeout,
 		WriteTimeout: api.WriteTimeout,
 		IdleTimeout:  api.IdleTimeout,
