@@ -17,8 +17,8 @@ type MyServer struct {
 }
 
 type MyAPIServer struct {
-	addr         string
-	dns          string
+	Addr         string
+	Dns          string
 	AppName      string
 	AppVer       string
 	AppAuthor    string
@@ -71,7 +71,7 @@ func (api *MyAPIServer) Run() error {
 
 	//Define server
 	prodServer := &http.Server{
-		Addr:         api.addr,
+		Addr:         api.Addr,
 		Handler:      middlewareChain(servM),
 		ReadTimeout:  api.ReadTimeout,
 		WriteTimeout: api.WriteTimeout,
@@ -85,7 +85,7 @@ func (api *MyAPIServer) Run() error {
 		myFigure.Print()
 		l.Printf("version: %v", api.AppVer)
 		l.Printf("Author: %v", api.AppAuthor)
-		l.Printf("Starting server at port %v", api.addr)
+		l.Printf("Starting server at port %v", api.Addr)
 		if err = prodServer.ListenAndServe(); err != nil {
 			l.Printf("Error starting server %v", err)
 			os.Exit(1)
