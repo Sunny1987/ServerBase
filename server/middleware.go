@@ -15,5 +15,5 @@ func (api *MyAPIServer) MiddlewareChain(middlewares []Middleware) Middleware {
 }
 
 func (api *MyAPIServer) Add(middleware Middleware) {
-	api.Serv.middlewareList = append(api.Serv.middlewareList, middleware)
+	api.Serv.MiddlewareList = append(api.Serv.MiddlewareList, middleware)
 }
