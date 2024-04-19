@@ -7,7 +7,7 @@ ServerBase is a Go library that provides a boilerplate for building HTTP servers
 To use ServerBase in your Go project, simply import it:
 
 ```go
-import "github.com/Sunny1987/ServerBase"
+go get github.com/Sunny1987/ServerBase
 ```
 
 # Getting Started
