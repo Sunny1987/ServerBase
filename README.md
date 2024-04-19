@@ -1,52 +1,59 @@
-ServerBase
+# ServerBase
+
 ServerBase is a Go library that provides a boilerplate for building HTTP servers with ease. It includes features such as middleware support, route registration, and server management to streamline your server development process.
 
-Installation
+## Installation
+
 To use ServerBase in your Go project, simply import it:
 
-go
-Copy code
-import "github.com/Sunny1987/ServerBase/server"
-Getting Started
-Creating a Server
+```go
+import "github.com/Sunny1987/ServerBase"
+```
+
+# Getting Started
+
+## Creating a Server
 To create a new API server instance, you can use the NewMyAPIServer function provided by ServerBase. Here's an example of how to create a server:
 
-go
-Copy code
+```go
 app := server.NewMyAPIServer(&server.OptionalParams{
     Addr:      ":8080",
     AppName:   "MyApp",
     AppAuthor: "John Doe",
     AppVer:    "1.0.0",
 })
-Registering Routes
-You can register HTTP routes with various methods such as Get, Post, Put, and Delete. Here's an example of registering routes:
+```
 
-go
-Copy code
+## Registering Routes
+You can register HTTP routes with various methods such as **Get**, **Post**, **Put**, and **Delete**. Here's an example of registering routes:
+
+```go
 app.Get("/ping", pingHandler)
 app.Post("/api/resource", createResourceHandler)
-Adding Middleware
-ServerBase supports middleware to intercept and preprocess HTTP requests. You can add middleware functions using the AddMiddleware method. Here's an example:
+```
 
-go
-Copy code
+## Adding Middleware
+ServerBase supports middleware to intercept and preprocess HTTP requests. You can add middleware functions using the **AddMiddleware method**. Here's an example:
+
+```go
 app.AddMiddleware(authMiddleware)
 app.AddMiddleware(loggingMiddleware)
-Running the Server
-To start the server, simply call the Run method:
+```
 
-go
-Copy code
+## Running the Server
+To start the server, simply call the **Run** method:
+
+```go
 err := app.Run()
 if err != nil {
     log.Fatal(err)
 }
-Example Usage
-Here's an example of how to use ServerBase to create and run an API server:
+```
 
-go
-Copy code
+# Example Usage
+Here's an example of how to use **ServerBase** to create and run an API server:
+
+```go
 package main
 
 import (
@@ -99,5 +106,5 @@ func loggingMiddleware(next http.Handler) http.Handler {
         next.ServeHTTP(w, r)
     })
 }
-Contributing
-Contributions are welcome! If you find any bugs or have suggestions for improvements, please open an issue or submit a pull request.
+```
+
