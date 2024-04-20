@@ -107,4 +107,54 @@ func loggingMiddleware(next http.Handler) http.Handler {
     })
 }
 ```
+# Alternate Approach with New Handlers
+Here's an alternate example of how to use **ServerBase** to create and run an API server keeping **NewHandler=true**:
 
+```go
+
+import (
+    "github.com/Sunny1987/ServerBase/server"
+    "log"
+)
+
+func main() {
+    // Create a new API server instance
+    app := server.NewMyAPIServer(&server.OptionalParams{
+        Addr:      ":8080",
+        AppName:   "MyApp",
+        AppAuthor: "John Doe",
+        AppVer:    "1.0.0",
+        NewHandler: true,
+    })
+
+    // Register routes
+    app.GetN("/ping", pingHandler)
+    app.PostN("/resource", createResourceHandler)
+
+    // Add middleware
+    app.AddMiddlewareN(authMiddleware)
+    app.AddMiddlewareN(loggingMiddleware)
+
+    // Run the server
+    err := app.Run()
+    if err != nil {
+        log.Fatal(err)
+    }
+}
+
+func pingHandler(ctx server.ContextHandlert) {
+    // Handler logic for the ping route
+}
+
+func createResourceHandler(ctx server.ContextHandler) {
+    // Handler logic for creating a resource
+}
+
+func authMiddleware(ctx server.ContextHandler) {
+   // Middleware logic for authentication
+}
+
+func loggingMiddleware(ctx server.ContextHandler) {
+   // Middleware logic for logging
+}
+```
