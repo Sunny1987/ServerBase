@@ -158,3 +158,32 @@ func loggingMiddleware(ctx server.ContextHandler) {
    // Middleware logic for logging
 }
 ```
+
+# ContextHandler concepts
+This struct ContextHandler encapsulates the HTTP response writer, request, logger, and DNS information, providing a convenient 
+way to handle HTTP requests and responses with additional context.
+
+ ```go
+// ContextHandler wraps the response writer, request, logger, and DNS information.
+type ContextHandler struct {
+	// Writer is an interface used to construct HTTP responses.
+	Writer http.ResponseWriter
+
+	// Request is the HTTP request received from the client.
+	Request *http.Request
+
+	// Logger is a logger instance for logging context-related events.
+	Logger *log.Logger
+
+	// DNS is the domain name server information.
+	DNS string
+}
+ ```
+
+# ContextHandler Methods 
+
+| Method | USage |
+|----------|----------|
+| JSON(data interface{} | Writes a JSON response with the provided data to the ResponseWriter. |
+| DecodeJSON(v interface{}) | Reads the JSON data from the request body and decodes it into the provided interface. |
+
