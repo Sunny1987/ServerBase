@@ -106,72 +106,125 @@ type OptionalParams struct {
 	NewHandler bool
 }
 
+// NewMyAPIServer creates a new instance of MyAPIServer with the provided optional parameters.
 func NewMyAPIServer(opts *OptionalParams) *MyAPIServer {
+	// Create a new MyAPIServer instance
 	api := &MyAPIServer{}
 
-	if opts.Addr == "" {
-		api.Addr = ":8080"
-	} else {
-		api.Addr = opts.Addr
-	}
+	// Set port based on the provided options
+	SetPort(opts, api)
 
-	if opts.Dns == "" {
-	} else {
-		api.Dns = opts.Dns
-	}
+	// Set DNS based on the provided options
+	SetDNS(opts, api)
 
-	if opts.AppName == "" {
-		api.AppName = AppNameDefault
-	} else {
-		api.AppName = opts.AppName
-	}
+	// Set application name based on the provided options
+	SetAppName(opts, api)
 
+	// Set application version based on the provided options
+	SetAppVersion(opts, api)
+
+	// Set application author based on the provided options
+	SetAppAuthor(opts, api)
+
+	// Set read timeout based on the provided options
+	SetReadTimeOut(opts, api)
+
+	// Set write timeout based on the provided options
+	SetWriteTimeOut(opts, api)
+
+	// Set idle timeout based on the provided options
+	SetIdleTimeOut(opts, api)
+
+	// Set logger based on the provided options
+	SetLogger(opts, api)
+
+	// Set new handler flag based on the provided options
+	SetNewHandler(opts, api)
+
+	// Create a new MyServer instance with a new ServeMux
+	api.Serv = &MyServer{ServeMux: http.NewServeMux()}
+
+	return api
+}
+
+func SetNewHandler(opts *OptionalParams, api *MyAPIServer) {
+	if opts.NewHandler == false {
+		api.HandlerNew = false
+	} else {
+		api.HandlerNew = true
+	}
+}
+
+func SetLogger(opts *OptionalParams, api *MyAPIServer) {
+	if opts.Logger == nil {
+		api.Logger = log.New(os.Stdout, api.AppName, log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
+	} else {
+		api.Logger = opts.Logger
+	}
+}
+
+func SetIdleTimeOut(opts *OptionalParams, api *MyAPIServer) {
+	if opts.IdleTimeout == 0 {
+		api.IdleTimeout = 50 * time.Second
+	} else {
+		api.IdleTimeout = opts.IdleTimeout
+	}
+}
+
+func SetWriteTimeOut(opts *OptionalParams, api *MyAPIServer) {
+	if opts.WriteTimeout == 0 {
+		api.WriteTimeout = 50 * time.Second
+	} else {
+		api.WriteTimeout = opts.WriteTimeout
+	}
+}
+
+func SetReadTimeOut(opts *OptionalParams, api *MyAPIServer) {
+	if opts.ReadTimeout == 0 {
+		api.ReadTimeout = 20 * time.Second
+	} else {
+		api.ReadTimeout = opts.ReadTimeout
+	}
+}
+
+func SetAppAuthor(opts *OptionalParams, api *MyAPIServer) {
+	if opts.AppAuthor == "" {
+		api.AppAuthor = AppAuthorDefault
+	} else {
+		api.AppAuthor = opts.AppAuthor
+	}
+}
+
+func SetAppVersion(opts *OptionalParams, api *MyAPIServer) {
 	if opts.AppVer == "" {
 		api.AppVer = AppVersionDefault
 
 	} else {
 		api.AppVer = opts.AppVer
 	}
+}
 
-	if opts.AppAuthor == "" {
-		api.AppAuthor = AppAuthorDefault
+func SetAppName(opts *OptionalParams, api *MyAPIServer) {
+	if opts.AppName == "" {
+		api.AppName = AppNameDefault
 	} else {
-		api.AppAuthor = opts.AppAuthor
+		api.AppName = opts.AppName
 	}
+}
 
-	if opts.ReadTimeout == 0 {
-		api.ReadTimeout = 20 * time.Second
+func SetDNS(opts *OptionalParams, api *MyAPIServer) {
+	if opts.Dns == "" {
 	} else {
-		api.ReadTimeout = opts.ReadTimeout
+		api.Dns = opts.Dns
 	}
+}
 
-	if opts.WriteTimeout == 0 {
-		api.WriteTimeout = 50 * time.Second
+func SetPort(opts *OptionalParams, api *MyAPIServer) {
+	if opts.Addr == "" {
+		api.Addr = ":8080"
 	} else {
-		api.WriteTimeout = opts.WriteTimeout
+		api.Addr = opts.Addr
 	}
-
-	if opts.IdleTimeout == 0 {
-		api.IdleTimeout = 50 * time.Second
-	} else {
-		api.IdleTimeout = opts.IdleTimeout
-	}
-
-	if opts.Logger == nil {
-		api.Logger = log.New(os.Stdout, api.AppName, log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
-	} else {
-		api.Logger = opts.Logger
-	}
-
-	if opts.NewHandler == false {
-		api.HandlerNew = false
-	} else {
-		api.HandlerNew = true
-	}
-
-	api.Serv = &MyServer{ServeMux: http.NewServeMux()}
-
-	return api
 }
 
 // ContextHandler wraps the response writer, request, logger, and DNS information.
