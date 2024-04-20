@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/common-nighthawk/go-figure"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -26,7 +28,8 @@ type MyAPIServer struct {
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
 	Serv         *MyServer
-	l            *log.Logger
+	Logger       *log.Logger
+	HandlerNew   bool
 }
 
 type OptionalParams struct {
@@ -38,8 +41,7 @@ type OptionalParams struct {
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
-	l            *log.Logger
-	//Prefix       string
+	Logger       *log.Logger
 }
 
 func NewMyAPIServer(opts *OptionalParams) *MyAPIServer {
@@ -52,15 +54,16 @@ func NewMyAPIServer(opts *OptionalParams) *MyAPIServer {
 	}
 
 	if opts.Dns == "" {
-
 	} else {
 		api.Dns = opts.Dns
 	}
+
 	if opts.AppName == "" {
 		api.AppName = ""
 	} else {
 		api.AppName = opts.AppName
 	}
+
 	if opts.AppVer == "" {
 
 	} else {
@@ -91,10 +94,10 @@ func NewMyAPIServer(opts *OptionalParams) *MyAPIServer {
 		api.IdleTimeout = opts.IdleTimeout
 	}
 
-	if opts.l == nil {
-		api.l = log.New(os.Stdout, "MyAPIServer ", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
+	if opts.Logger == nil {
+		api.Logger = log.New(os.Stdout, api.AppName, log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
 	} else {
-		api.l = opts.l
+		api.Logger = opts.Logger
 	}
 
 	api.Serv = &MyServer{ServeMux: http.NewServeMux()}
@@ -102,11 +105,32 @@ func NewMyAPIServer(opts *OptionalParams) *MyAPIServer {
 	return api
 }
 
-func (api *MyAPIServer) Get(pattern string, myHandler func(http.ResponseWriter, *http.Request)) {
-	api.l.Println("Starting Get")
-	api.Serv.ServeMux.HandleFunc("GET "+pattern, myHandler)
+type ContextHandler struct {
+	Writer  http.ResponseWriter
+	Request *http.Request
+	Logger  *log.Logger
+	DNS     string
 }
 
+// Define a wrapper function that converts ContextHandler into http.HandlerFunc
+func (api *MyAPIServer) handlerWrapper(handler func(ContextHandler)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Create a ContextHandler with the request and response writer
+		ctx := ContextHandler{
+			Writer:  w,
+			Request: r,
+			Logger:  api.Logger,
+			DNS:     api.Dns,
+		}
+		// Call the handler function with the ContextHandler
+		handler(ctx)
+	}
+}
+
+// ******Old Handler Definitions**********//
+func (api *MyAPIServer) Get(pattern string, myHandler func(http.ResponseWriter, *http.Request)) {
+	api.Serv.ServeMux.HandleFunc("GET "+pattern, myHandler)
+}
 func (api *MyAPIServer) Post(pattern string, myHandler func(http.ResponseWriter, *http.Request)) {
 	api.Serv.ServeMux.HandleFunc("POST "+pattern, myHandler)
 }
@@ -116,6 +140,54 @@ func (api *MyAPIServer) Put(pattern string, myHandler func(http.ResponseWriter, 
 
 func (api *MyAPIServer) Delete(pattern string, myHandler func(http.ResponseWriter, *http.Request)) {
 	api.Serv.ServeMux.HandleFunc("DELETE "+pattern, myHandler)
+}
+
+// ******New Handler Definitions**********//
+func (api *MyAPIServer) GetN(pattern string, myHandler func(ctx ContextHandler)) {
+	api.Serv.ServeMux.HandleFunc("GET "+pattern, api.handlerWrapper(myHandler))
+}
+
+func (api *MyAPIServer) PostN(pattern string, myHandler func(ctx ContextHandler)) {
+	api.Serv.ServeMux.HandleFunc("POST "+pattern, api.handlerWrapper(myHandler))
+}
+
+func (api *MyAPIServer) PutN(pattern string, myHandler func(ctx ContextHandler)) {
+	api.Serv.ServeMux.HandleFunc("PUT "+pattern, api.handlerWrapper(myHandler))
+}
+
+func (api *MyAPIServer) DeleteN(pattern string, myHandler func(ctx ContextHandler)) {
+	api.Serv.ServeMux.HandleFunc("DELETE "+pattern, api.handlerWrapper(myHandler))
+}
+
+func (ctx *ContextHandler) JSON(data interface{}) {
+	// Set Content-Type header to application/json
+	ctx.Writer.Header().Set("Content-Type", "application/json")
+	// Marshal the data to JSON
+	jsonBytes, err := json.Marshal(data)
+	if err != nil {
+		// If an error occurs during JSON marshalling, write an error response
+		ctx.Writer.WriteHeader(http.StatusInternalServerError)
+		ctx.Writer.Write([]byte(`{"error": "Internal Server Error"}`))
+		return
+	}
+	// Write the JSON response
+	ctx.Writer.Write(jsonBytes)
+}
+
+// DecodeJSON decodes JSON data from the request body into the provided interface.
+func (ctx *ContextHandler) DecodeJSON(v interface{}) error {
+	// Read the request body
+	body, err := io.ReadAll(ctx.Request.Body)
+	if err != nil {
+		return err
+	}
+	defer ctx.Request.Body.Close()
+
+	// Unmarshal the JSON data into the provided interface
+	if err = json.Unmarshal(body, &v); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (api *MyAPIServer) AddPrefix(prefix string) {
@@ -140,7 +212,7 @@ func (api *MyAPIServer) Run() error {
 	} else {
 		servM = api.Serv.ServeMux
 	}
-	api.l.Println("servM configured")
+	api.Logger.Println("servM configured")
 
 	//Define server
 	prodServer := &http.Server{
@@ -149,20 +221,20 @@ func (api *MyAPIServer) Run() error {
 		ReadTimeout:  api.ReadTimeout,
 		WriteTimeout: api.WriteTimeout,
 		IdleTimeout:  api.IdleTimeout,
-		ErrorLog:     api.l,
+		ErrorLog:     api.Logger,
 	}
 
-	api.l.Println("prodServer configured")
+	api.Logger.Println("prodServer configured")
 
 	//call to serve
 	go func() {
 		myFigure := figure.NewFigure(api.AppName, "", true)
 		myFigure.Print()
-		api.l.Printf("version: %v", api.AppVer)
-		api.l.Printf("Author: %v", api.AppAuthor)
-		api.l.Printf("Starting server at port %v", api.Addr)
+		api.Logger.Printf("version: %v", api.AppVer)
+		api.Logger.Printf("Author: %v", api.AppAuthor)
+		api.Logger.Printf("Starting server at port %v", api.Addr)
 		if err = prodServer.ListenAndServe(); err != nil {
-			api.l.Printf("Error starting server %v", err)
+			api.Logger.Printf("Error starting server %v", err)
 			os.Exit(1)
 		}
 	}()
@@ -171,12 +243,12 @@ func (api *MyAPIServer) Run() error {
 	signal.Notify(sigChan, os.Interrupt)
 	sig := <-sigChan
 
-	api.l.Println("Stopping server as per user interrupt", sig)
+	api.Logger.Println("Stopping server as per user interrupt", sig)
 
 	tc, _ := context.WithTimeout(context.Background(), 30*time.Second)
 	err = prodServer.Shutdown(tc)
 	if err != nil {
-		api.l.Println(err)
+		api.Logger.Println(err)
 		return err
 	}
 	return err
