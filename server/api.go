@@ -1,10 +1,14 @@
+/*
+   Package server provides functionality for creating and running HTTP servers.
+
+   Author: Sabyasachi Roy
+*/
+
 package server
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/common-nighthawk/go-figure"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -12,36 +16,94 @@ import (
 	"time"
 )
 
+var (
+	AppNameDefault    = "MyAPIServer"
+	AppVersionDefault = "1.0.0"
+	AppAuthorDefault  = "Ghost"
+)
+
+// MyServer represents the server configuration and middleware.
 type MyServer struct {
-	ServeMux       *http.ServeMux
+	// ServeMux is the default ServeMux for handling HTTP requests.
+	ServeMux *http.ServeMux
+
+	// MiddlewareList contains middleware functions to be applied to standard handler functions.
 	MiddlewareList []Middleware
+
+	// MiddlewareListN contains middleware functions to be applied to ContextHandler functions.
+	MiddlewareListN []MiddlewareConvertedN
+
+	// PrefixServeMux is an optional ServeMux for handling requests with a specific prefix.
 	PrefixServeMux *http.ServeMux
 }
 
+// MyAPIServer represents the configuration for the API server.
 type MyAPIServer struct {
-	Addr         string
-	Dns          string
-	AppName      string
-	AppVer       string
-	AppAuthor    string
-	ReadTimeout  time.Duration
+	// Addr is the address the server will listen on.
+	Addr string
+
+	// Dns is the domain name of the server.
+	Dns string
+
+	// AppName is the name of the application.
+	AppName string
+
+	// AppVer is the version of the application.
+	AppVer string
+
+	// AppAuthor is the author of the application.
+	AppAuthor string
+
+	// ReadTimeout is the maximum duration for reading the entire request.
+	ReadTimeout time.Duration
+
+	// WriteTimeout is the maximum duration before timing out writes of the response.
 	WriteTimeout time.Duration
-	IdleTimeout  time.Duration
-	Serv         *MyServer
-	Logger       *log.Logger
-	HandlerNew   bool
+
+	// IdleTimeout is the maximum duration the server is allowed to idle without activity.
+	IdleTimeout time.Duration
+
+	// Serv is the instance of the MyServer.
+	Serv *MyServer
+
+	// Logger is the logger instance for logging server events.
+	Logger *log.Logger
+
+	// HandlerNew determines whether the server uses the new handler functions or the old ones.
+	HandlerNew bool
 }
 
+// OptionalParams represents optional parameters for configuring the API server.
 type OptionalParams struct {
-	Addr         string
-	Dns          string
-	AppName      string
-	AppVer       string
-	AppAuthor    string
-	ReadTimeout  time.Duration
+	// Addr is the address the server will listen on.
+	Addr string
+
+	// Dns is the domain name of the server.
+	Dns string
+
+	// AppName is the name of the application.
+	AppName string
+
+	// AppVer is the version of the application.
+	AppVer string
+
+	// AppAuthor is the author of the application.
+	AppAuthor string
+
+	// ReadTimeout is the maximum duration for reading the entire request.
+	ReadTimeout time.Duration
+
+	// WriteTimeout is the maximum duration before timing out writes of the response.
 	WriteTimeout time.Duration
-	IdleTimeout  time.Duration
-	Logger       *log.Logger
+
+	// IdleTimeout is the maximum duration the server is allowed to idle without activity.
+	IdleTimeout time.Duration
+
+	// Logger is the logger instance for logging server events.
+	Logger *log.Logger
+
+	// NewHandler determines whether the server uses the new handler functions or the old ones.
+	NewHandler bool
 }
 
 func NewMyAPIServer(opts *OptionalParams) *MyAPIServer {
@@ -59,19 +121,20 @@ func NewMyAPIServer(opts *OptionalParams) *MyAPIServer {
 	}
 
 	if opts.AppName == "" {
-		api.AppName = ""
+		api.AppName = AppNameDefault
 	} else {
 		api.AppName = opts.AppName
 	}
 
 	if opts.AppVer == "" {
+		api.AppVer = AppVersionDefault
 
 	} else {
 		api.AppVer = opts.AppVer
 	}
 
 	if opts.AppAuthor == "" {
-
+		api.AppAuthor = AppAuthorDefault
 	} else {
 		api.AppAuthor = opts.AppAuthor
 	}
@@ -100,19 +163,33 @@ func NewMyAPIServer(opts *OptionalParams) *MyAPIServer {
 		api.Logger = opts.Logger
 	}
 
+	if opts.NewHandler == false {
+		api.HandlerNew = false
+	} else {
+		api.HandlerNew = true
+	}
+
 	api.Serv = &MyServer{ServeMux: http.NewServeMux()}
 
 	return api
 }
 
+// ContextHandler wraps the response writer, request, logger, and DNS information.
 type ContextHandler struct {
-	Writer  http.ResponseWriter
+	// Writer is an interface used to construct HTTP responses.
+	Writer http.ResponseWriter
+
+	// Request is the HTTP request received from the client.
 	Request *http.Request
-	Logger  *log.Logger
-	DNS     string
+
+	// Logger is a logger instance for logging context-related events.
+	Logger *log.Logger
+
+	// DNS is the domain name server information.
+	DNS string
 }
 
-// Define a wrapper function that converts ContextHandler into http.HandlerFunc
+// handlerWrapper is a helper method that wraps a ContextHandler-based handler function into a standard http.HandlerFunc.
 func (api *MyAPIServer) handlerWrapper(handler func(ContextHandler)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Create a ContextHandler with the request and response writer
@@ -127,69 +204,6 @@ func (api *MyAPIServer) handlerWrapper(handler func(ContextHandler)) http.Handle
 	}
 }
 
-// ******Old Handler Definitions**********//
-func (api *MyAPIServer) Get(pattern string, myHandler func(http.ResponseWriter, *http.Request)) {
-	api.Serv.ServeMux.HandleFunc("GET "+pattern, myHandler)
-}
-func (api *MyAPIServer) Post(pattern string, myHandler func(http.ResponseWriter, *http.Request)) {
-	api.Serv.ServeMux.HandleFunc("POST "+pattern, myHandler)
-}
-func (api *MyAPIServer) Put(pattern string, myHandler func(http.ResponseWriter, *http.Request)) {
-	api.Serv.ServeMux.HandleFunc("PUT "+pattern, myHandler)
-}
-
-func (api *MyAPIServer) Delete(pattern string, myHandler func(http.ResponseWriter, *http.Request)) {
-	api.Serv.ServeMux.HandleFunc("DELETE "+pattern, myHandler)
-}
-
-// ******New Handler Definitions**********//
-func (api *MyAPIServer) GetN(pattern string, myHandler func(ctx ContextHandler)) {
-	api.Serv.ServeMux.HandleFunc("GET "+pattern, api.handlerWrapper(myHandler))
-}
-
-func (api *MyAPIServer) PostN(pattern string, myHandler func(ctx ContextHandler)) {
-	api.Serv.ServeMux.HandleFunc("POST "+pattern, api.handlerWrapper(myHandler))
-}
-
-func (api *MyAPIServer) PutN(pattern string, myHandler func(ctx ContextHandler)) {
-	api.Serv.ServeMux.HandleFunc("PUT "+pattern, api.handlerWrapper(myHandler))
-}
-
-func (api *MyAPIServer) DeleteN(pattern string, myHandler func(ctx ContextHandler)) {
-	api.Serv.ServeMux.HandleFunc("DELETE "+pattern, api.handlerWrapper(myHandler))
-}
-
-func (ctx *ContextHandler) JSON(data interface{}) {
-	// Set Content-Type header to application/json
-	ctx.Writer.Header().Set("Content-Type", "application/json")
-	// Marshal the data to JSON
-	jsonBytes, err := json.Marshal(data)
-	if err != nil {
-		// If an error occurs during JSON marshalling, write an error response
-		ctx.Writer.WriteHeader(http.StatusInternalServerError)
-		ctx.Writer.Write([]byte(`{"error": "Internal Server Error"}`))
-		return
-	}
-	// Write the JSON response
-	ctx.Writer.Write(jsonBytes)
-}
-
-// DecodeJSON decodes JSON data from the request body into the provided interface.
-func (ctx *ContextHandler) DecodeJSON(v interface{}) error {
-	// Read the request body
-	body, err := io.ReadAll(ctx.Request.Body)
-	if err != nil {
-		return err
-	}
-	defer ctx.Request.Body.Close()
-
-	// Unmarshal the JSON data into the provided interface
-	if err = json.Unmarshal(body, &v); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (api *MyAPIServer) AddPrefix(prefix string) {
 	v1 := http.NewServeMux()
 	prefix2 := prefix[:len(prefix)-1]
@@ -199,34 +213,48 @@ func (api *MyAPIServer) AddPrefix(prefix string) {
 
 func (api *MyAPIServer) Run() error {
 	var err error
-
-	//get registered middleware
-	middlewareChain := api.MiddlewareChain(api.Serv.MiddlewareList)
-
-	//get final middleware
 	var servM http.Handler
-	if api.Serv.PrefixServeMux != nil && api.Serv.MiddlewareList != nil {
-		servM = middlewareChain(api.Serv.PrefixServeMux)
-	} else if api.Serv.ServeMux != nil && api.Serv.MiddlewareList != nil {
-		servM = middlewareChain(api.Serv.ServeMux)
+
+	if api.HandlerNew {
+		servM = api.NewServMConfigure(servM)
 	} else {
-		servM = api.Serv.ServeMux
+		servM = api.OldServMConfigure(servM)
 	}
 	api.Logger.Println("servM configured")
 
 	//Define server
-	prodServer := &http.Server{
-		Addr:         api.Addr,
-		Handler:      servM,
-		ReadTimeout:  api.ReadTimeout,
-		WriteTimeout: api.WriteTimeout,
-		IdleTimeout:  api.IdleTimeout,
-		ErrorLog:     api.Logger,
-	}
-
+	prodServer := api.ConfigureServer(servM)
 	api.Logger.Println("prodServer configured")
 
 	//call to serve
+	if err = api.StartServer(err, prodServer); err != nil {
+		return err
+	}
+	sig := api.ListenForInterrupt()
+
+	api.Logger.Println("Stopping server as per user interrupt", sig)
+	err = api.ShutDown(err, prodServer)
+	return err
+}
+
+func (api *MyAPIServer) ShutDown(err error, prodServer *http.Server) error {
+	tc, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	err = prodServer.Shutdown(tc)
+	if err != nil {
+		api.Logger.Println(err)
+		return err
+	}
+	return err
+}
+
+func (api *MyAPIServer) ListenForInterrupt() os.Signal {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt)
+	sig := <-sigChan
+	return sig
+}
+
+func (api *MyAPIServer) StartServer(err error, prodServer *http.Server) error {
 	go func() {
 		myFigure := figure.NewFigure(api.AppName, "", true)
 		myFigure.Print()
@@ -238,18 +266,45 @@ func (api *MyAPIServer) Run() error {
 			os.Exit(1)
 		}
 	}()
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-	sig := <-sigChan
-
-	api.Logger.Println("Stopping server as per user interrupt", sig)
-
-	tc, _ := context.WithTimeout(context.Background(), 30*time.Second)
-	err = prodServer.Shutdown(tc)
-	if err != nil {
-		api.Logger.Println(err)
-		return err
-	}
 	return err
+}
+
+func (api *MyAPIServer) ConfigureServer(servM http.Handler) *http.Server {
+	prodServer := &http.Server{
+		Addr:         api.Addr,
+		Handler:      servM,
+		ReadTimeout:  api.ReadTimeout,
+		WriteTimeout: api.WriteTimeout,
+		IdleTimeout:  api.IdleTimeout,
+		ErrorLog:     api.Logger,
+	}
+	return prodServer
+}
+
+func (api *MyAPIServer) OldServMConfigure(servM http.Handler) http.Handler {
+	//get registered middleware
+	middlewareChain := api.MiddlewareChain(api.Serv.MiddlewareList)
+
+	//get final middleware
+
+	if api.Serv.PrefixServeMux != nil && api.Serv.MiddlewareList != nil {
+		servM = middlewareChain(api.Serv.PrefixServeMux)
+	} else if api.Serv.ServeMux != nil && api.Serv.MiddlewareList != nil {
+		servM = middlewareChain(api.Serv.ServeMux)
+	} else {
+		servM = api.Serv.ServeMux
+	}
+	return servM
+}
+
+func (api *MyAPIServer) NewServMConfigure(servM http.Handler) http.Handler {
+	middlewareChainN := api.MiddlewareChainN(api.Serv.MiddlewareListN)
+	if api.Serv.PrefixServeMux != nil && api.Serv.MiddlewareListN != nil {
+		servM = middlewareChainN(api.Serv.PrefixServeMux)
+	} else if api.Serv.ServeMux != nil && api.Serv.MiddlewareListN != nil {
+		servM = middlewareChainN(api.Serv.ServeMux)
+	} else {
+		servM = api.Serv.ServeMux
+	}
+	return servM
 }
