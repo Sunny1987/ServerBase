@@ -159,7 +159,7 @@ func loggingMiddleware(ctx server.ContextHandler) {
 }
 ```
 
-# ContextHandler concepts
+## ContextHandler concepts
 This struct ContextHandler encapsulates the HTTP response writer, request, logger, and DNS information, providing a convenient 
 way to handle HTTP requests and responses with additional context.
 
@@ -180,7 +180,7 @@ type ContextHandler struct {
 }
  ```
 
-# ContextHandler Methods 
+## ContextHandler Methods 
 
 | Method | USage |
 |----------|----------|
